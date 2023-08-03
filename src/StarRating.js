@@ -4,7 +4,7 @@ import PropTypes from "prop-types";
 const ContainerStyle = { display: "flex", alignItems: "center", gap: "16px" };
 const StarContainerStyle = { display: "flex" };
 
-StarRating.PropTypes = {
+StarRating.propTypes = {
   maxRating: PropTypes.number,
   defaultRating: PropTypes.number,
   color: PropTypes.string,

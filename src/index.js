@@ -5,10 +5,10 @@ import StarRating from "./StarRating";
 // import App from "./App";
 
 function Test() {
-  const [movieRating, setMovieRaing] = useState(0);
+  const [movieRating, setMovieRating] = useState(0);
   return (
     <dic>
-      <StarRating color="blue" maxRating={10} onSetRating={setMovieRaing} />
+      <StarRating color="blue" maxRating={10} onSetRating={setMovieRating} />
       <p>This movie was rated {movieRating} stars</p>
     </dic>
   );
