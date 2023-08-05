@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const tempMovieData = [
   {
@@ -53,12 +53,28 @@ const average = (arr) =>
 const key = "6ce95c0e";
 
 export default function App() {
-  const [movies, setMovies] = useState(tempMovieData);
-  const [watched, setWatched] = useState(tempWatchedData);
+  const [movies, setMovies] = useState([]);
+  const [watched, setWatched] = useState([]);
+  const query = "interstellar";
 
-  fetch(`http://www.omdbapi.com/?apikey=${key}&s=interstellar`)
-    .then((res) => res.json())
-    .then((data) => console.log(data));
+  useEffect(function () {
+    async function fetchMovies() {
+      const res = await fetch(
+        `http://www.omdbapi.com/?apikey=${key}&s=${query}`
+      );
+      const data = await res.json();
+      setMovies(data.Search);
+    }
+    fetchMovies();
+  }, []);
+
+  // This method also work but above is better
+  // useEffect(function () {
+  //   fetch(`http://www.omdbapi.com/?apikey=${key}&s=interstellar`)
+  //     .then((res) => res.json())
+  //     .then((data) => setMovies(data.Search));
+  // }, []);
+
   return (
     <>
       {/* Here we are fixing the problem of prop drilling by making a component reuseable */}
