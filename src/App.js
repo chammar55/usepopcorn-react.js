@@ -50,10 +50,15 @@ const tempWatchedData = [
 const average = (arr) =>
   arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
+const key = "6ce95c0e";
+
 export default function App() {
   const [movies, setMovies] = useState(tempMovieData);
   const [watched, setWatched] = useState(tempWatchedData);
 
+  fetch(`http://www.omdbapi.com/?apikey=${key}&s=interstellar`)
+    .then((res) => res.json())
+    .then((data) => console.log(data));
   return (
     <>
       {/* Here we are fixing the problem of prop drilling by making a component reuseable */}
