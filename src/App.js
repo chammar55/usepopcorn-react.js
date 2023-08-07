@@ -80,12 +80,15 @@ export default function App() {
 
   useEffect(
     function () {
+      const controller = new AbortController(); // ths is to cancel the extra http request that slow down our app (Remember its not a part of react but browser)
+
       async function fetchMovies() {
         try {
           setIsLoading(true);
           setError(""); // reseting error
           const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${key}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${key}&s=${query}`,
+            { signal: controller.signal }
           );
 
           if (!res.ok)
@@ -96,11 +99,14 @@ export default function App() {
 
           setMovies(data.Search);
         } catch (err) {
-          console.error(err.message);
+          if (err.name !== "AbortError") {
+            console.error(err.message);
+          }
           setError(err.message);
         } finally {
           // this part alway run
           setIsLoading(false);
+          setError(""); // reseting error
         }
       }
 
@@ -112,6 +118,9 @@ export default function App() {
       }
 
       fetchMovies();
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   );
@@ -337,7 +346,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       if (!title) return;
       document.title = `Movie | ${title}`;
 
-      // this return is called clean  up function and triggers when component unmounted.
+      // this return is called "clean up" function and triggers when component unmounted.
       return function () {
         document.title = "usePopcorn";
       };
