@@ -336,6 +336,11 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     function () {
       if (!title) return;
       document.title = `Movie | ${title}`;
+
+      // this return is called clean  up function and triggers when component unmounted.
+      return function () {
+        document.title = "usePopcorn";
+      };
     },
     [title]
   );
