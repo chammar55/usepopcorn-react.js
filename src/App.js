@@ -98,15 +98,15 @@ export default function App() {
           if (data.Response === "False") throw new Error("Movie not found"); // If user enter wrong name of movie and response from API is false
 
           setMovies(data.Search);
+          setError("");
         } catch (err) {
           if (err.name !== "AbortError") {
-            console.error(err.message);
+            console.log(err.message);
+            setError(err.message);
           }
-          setError(err.message);
         } finally {
           // this part alway run
           setIsLoading(false);
-          setError(""); // reseting error
         }
       }
 
@@ -117,6 +117,7 @@ export default function App() {
         return;
       }
 
+      handleCloseMovie(); // it is closing the previous search movie when we search for new one
       fetchMovies();
       return function () {
         controller.abort();
@@ -324,6 +325,21 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     onAddWatched(newWatchedMovie);
     onCloseMovie();
   }
+
+  useEffect(
+    function () {
+      function callback(e) {
+        if (e.code === "Escape") {
+          onCloseMovie();
+        }
+      }
+      document.addEventListener("keydown", callback);
+      return function () {
+        document.removeEventListener("keydown", callback);
+      };
+    },
+    [onCloseMovie]
+  );
 
   useEffect(
     function () {
