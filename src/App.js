@@ -1,5 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating";
+import { useMovies } from "./useMovies";
+import { useLocalStorageState } from "./useLocalStorageState";
+import { useKey } from "./useKey";
 
 // const tempMovieData = [
 //   {
@@ -55,16 +58,24 @@ const key = "6ce95c0e";
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState(null);
-
+  const [watched, setWatched] = useLocalStorageState([], "watched"); // Custom hook
   // const [watched, setWatched] = useState([]);
-  const [watched, setWatched] = useState(function () {
-    const storedValue = localStorage.getItem("watched"); // getting from local storage on initial render
-    return JSON.parse(storedValue);
-  });
+
+  // lower code is to fetch data from the local storage that we saved earlier
+  // const [watched, setWatched] = useState(function () {
+  //   const storedValue = localStorage.getItem("watched"); // getting from local storage on initial render
+  //   return JSON.parse(storedValue);
+  // });
+
+  const { movies, isLoading, error } = useMovies(query, handleCloseMovie); // Custom Hook
+
+  // This method also work but above is better
+  // useEffect(function () {
+  //   fetch(`http://www.omdbapi.com/?apikey=${key}&s=interstellar`)
+  //     .then((res) => res.json())
+  //     .then((data) => setMovies(data.Search));
+  // }, []);
 
   function handleSelectMovie(id) {
     setSelectedId((selectedId) => (id === selectedId ? null : id));
@@ -82,68 +93,13 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  useEffect(
-    // storing data to local storage (in browser)
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
-
-  useEffect(
-    function () {
-      const controller = new AbortController(); // ths is to cancel the extra http request that slow down our app (Remember its not a part of react but browser)
-
-      async function fetchMovies() {
-        try {
-          setIsLoading(true);
-          setError(""); // reseting error
-          const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${key}&s=${query}`,
-            { signal: controller.signal }
-          );
-
-          if (!res.ok)
-            throw new Error("Something went wrong with fetching movies");
-
-          const data = await res.json();
-          if (data.Response === "False") throw new Error("Movie not found"); // If user enter wrong name of movie and response from API is false
-
-          setMovies(data.Search);
-          setError("");
-        } catch (err) {
-          if (err.name !== "AbortError") {
-            console.log(err.message);
-            setError(err.message);
-          }
-        } finally {
-          // this part alway run
-          setIsLoading(false);
-        }
-      }
-
-      if (query.length < 3) {
-        // we have to write more then 3 letters in search bar for result
-        setMovies([]);
-        setError("");
-        return;
-      }
-
-      handleCloseMovie(); // it is closing the previous search movie when we search for new one
-      fetchMovies();
-      return function () {
-        controller.abort();
-      };
-    },
-    [query]
-  );
-
-  // This method also work but above is better
-  // useEffect(function () {
-  //   fetch(`http://www.omdbapi.com/?apikey=${key}&s=interstellar`)
-  //     .then((res) => res.json())
-  //     .then((data) => setMovies(data.Search));
-  // }, []);
+  // useEffect(
+  //   // storing data to local storage (in browser)
+  //   function () {
+  //     localStorage.setItem("watched", JSON.stringify(watched));
+  //   },
+  //   [watched]
+  // );
 
   return (
     <>
@@ -218,6 +174,41 @@ function Logo() {
 }
 
 function Search({ query, setQuery }) {
+  // to auto select the search bar on start of app
+
+  // recommended method to select search bar on start of app
+  const inputEl = useRef(null);
+
+  // Reusing the useKey custom hook
+  useKey("Enter", function () {
+    if (document.activeElement === inputEl.current) return;
+    inputEl.current.focus();
+    setQuery("");
+  });
+
+  // All this code working is now done in use key hook
+  // useEffect(
+  //   function () {
+  //     function callback(e) {
+  //       if (document.activeElement === inputEl.current) return;
+
+  //       if (e.code === "Enter") {
+  //         inputEl.current.focus();
+  //         setQuery("");
+  //       }
+  //     }
+  //     document.addEventListener("keydown", callback);
+  //     return () => document.addEventListener("keydown", callback);
+  //   },
+  //   [setQuery]
+  // );
+
+  // 1st method (not recommended)
+  // useEffect(function () {
+  //   const ref = document.querySelector(".search");
+  //   ref.focus();
+  // }, []);
+
   return (
     <input
       className="search"
@@ -225,6 +216,7 @@ function Search({ query, setQuery }) {
       placeholder="Search movies..."
       value={query}
       onChange={(e) => setQuery(e.target.value)}
+      ref={inputEl} // this will connect the useRef with this component
     />
   );
 }
@@ -306,6 +298,14 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState("");
 
+  const countRef = useRef(0);
+  useEffect(
+    function () {
+      if (userRating) countRef.current = countRef.current + 1;
+    },
+    [userRating]
+  );
+
   const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
   const watchedUserRating = watched.find(
     (movie) => movie.imdbID === selectedId
@@ -333,25 +333,28 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
       imdbRating: Number(imdbRating),
       runtime: Number(runtime.split(" ").at(0)), //splitting 120 from "min" and taking the numbers from 120min.
       userRating,
+      countRatingDecision: countRef.current,
     };
     onAddWatched(newWatchedMovie);
     onCloseMovie();
   }
 
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-        }
-      }
-      document.addEventListener("keydown", callback);
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+  useKey("Escape", onCloseMovie);
+  // Its now in custom hooks
+  // useEffect(
+  //   function () {
+  //     function callback(e) {
+  //       if (e.code === "Escape") {
+  //         onCloseMovie();
+  //       }
+  //     }
+  //     document.addEventListener("keydown", callback);
+  //     return function () {
+  //       document.removeEventListener("keydown", callback);
+  //     };
+  //   },
+  //   [onCloseMovie]
+  // );
 
   useEffect(
     function () {
